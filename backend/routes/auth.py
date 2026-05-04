@@ -89,9 +89,24 @@ async def reset_password_route(data: ResetPasswordRequest) -> dict[str, str]:
 async def pending_users_route(
     _admin: dict[str, Any] = Depends(require_role(ADMIN_ROLE)),
 ) -> dict[str, list[dict[str, Any]]]:
-    users = await get_users_collection().find({"is_approved": False}).to_list(length=None)
     result: list[dict[str, Any]] = []
-    for u in users:
+    cursor = get_users_collection().find({"is_approved": False})
+    async for u in cursor:
+        u["_id"] = str(u["_id"])
+        u.pop("password", None)
+        u.pop("reset_token", None)
+        u.pop("reset_token_created_at", None)
+        result.append(u)
+    return {"users": result}
+
+
+@router.get("/users")
+async def list_users_route(
+    _admin: dict[str, Any] = Depends(require_role(ADMIN_ROLE)),
+) -> dict[str, list[dict[str, Any]]]:
+    result: list[dict[str, Any]] = []
+    cursor = get_users_collection().find({"is_approved": True})
+    async for u in cursor:
         u["_id"] = str(u["_id"])
         u.pop("password", None)
         u.pop("reset_token", None)

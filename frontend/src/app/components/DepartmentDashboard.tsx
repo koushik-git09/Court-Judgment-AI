@@ -27,16 +27,6 @@ export function DepartmentDashboard() {
   const [cases, setCases] = useState<DepartmentCase[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [messages, setMessages] = useState<
-    Array<{ from: string; text: string }>
-  >([
-    {
-      from: "System",
-      text: "This chat is UI-only (no backend).",
-    },
-  ]);
-  const [chatText, setChatText] = useState("");
-
   useEffect(() => {
     const fetchCases = async () => {
       try {
@@ -364,39 +354,6 @@ export function DepartmentDashboard() {
             })}
           </div>
         )}
-      </div>
-
-      {/* Chat UI (no backend) */}
-      <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-        <div className="text-gray-900 text-sm font-semibold">Team Chat</div>
-        <div className="mt-3 max-h-44 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-2">
-          {messages.map((m, idx) => (
-            <div key={`${idx}-${m.from}`} className="text-sm text-gray-700">
-              <span className="font-medium text-gray-900">{m.from}:</span>{" "}
-              {m.text}
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-3 flex gap-2">
-          <input
-            value={chatText}
-            onChange={(e) => setChatText(e.target.value)}
-            placeholder="Type a message…"
-            className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000]"
-          />
-          <button
-            onClick={() => {
-              const trimmed = chatText.trim();
-              if (!trimmed) return;
-              setMessages((prev) => [...prev, { from: "You", text: trimmed }]);
-              setChatText("");
-            }}
-            className="px-4 py-2 rounded-lg bg-[#8B0000] text-white hover:bg-[#6B0000] transition-colors"
-          >
-            Send
-          </button>
-        </div>
       </div>
     </div>
   );

@@ -3,62 +3,70 @@ import { useEffect, useState } from "react";
 
 import { useAuth } from "../context/AuthContext";
 
+type BackendUser = {
+  _id: string;
+  name?: string;
+  email?: string;
+  role?: string;
+  department?: string | null;
+  created_at?: string;
+  last_login?: string;
+};
+
+function formatDateTime(value?: string) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function formatRole(role?: string) {
+  if (!role) return "—";
+  if (role === "admin") return "Admin";
+  if (role === "verifier") return "Verifier";
+  if (role === "department") return "Department User";
+  return role;
+}
+
 export function UserManagement() {
   const [showAddUser, setShowAddUser] = useState(false);
-  const { authFetch } = useAuth();
+  const { authFetch, apiBaseUrl } = useAuth();
 
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [pendingError, setPendingError] = useState<string | null>(null);
 
-  const users = [
-    {
-      id: 1,
-      name: "Rajesh Kumar",
-      email: "rajesh.kumar@karnataka.gov.in",
-      employeeId: "KA-2024-5678",
-      role: "Verifier",
-      department: "Transport",
-      status: "Active",
-      lastLogin: "2026-05-01 09:30",
-    },
-    {
-      id: 2,
-      name: "Priya Sharma",
-      email: "priya.sharma@karnataka.gov.in",
-      employeeId: "KA-2024-5679",
-      role: "Department User",
-      department: "Revenue",
-      status: "Active",
-      lastLogin: "2026-05-01 08:15",
-    },
-    {
-      id: 3,
-      name: "Vijay Patil",
-      email: "vijay.patil@karnataka.gov.in",
-      employeeId: "KA-2024-5680",
-      role: "Verifier",
-      department: "Education",
-      status: "Active",
-      lastLogin: "2026-04-30 16:45",
-    },
-    {
-      id: 4,
-      name: "Lakshmi Rao",
-      email: "lakshmi.rao@karnataka.gov.in",
-      employeeId: "KA-2024-5681",
-      role: "Department User",
-      department: "Health",
-      status: "Inactive",
-      lastLogin: "2026-04-28 14:20",
-    },
-  ];
+  const [users, setUsers] = useState<BackendUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
+
+  const loadUsers = async () => {
+    setUsersLoading(true);
+    setUsersError(null);
+    try {
+      const res = await authFetch(`${apiBaseUrl}/auth/users`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail || "Failed to load users");
+      setUsers(Array.isArray(data?.users) ? data.users : []);
+    } catch (err: any) {
+      setUsers([]);
+      setUsersError(err?.message || "Failed to load users");
+    } finally {
+      setUsersLoading(false);
+    }
+  };
 
   const loadPending = async () => {
     setPendingLoading(true);
     setPendingError(null);
     try {
-      const res = await authFetch("http://127.0.0.1:8000/auth/pending-users");
+      const res = await authFetch(`${apiBaseUrl}/auth/pending-users`);
       const data = await res.json();
       if (!res.ok)
         throw new Error(data?.detail || "Failed to load pending users");
@@ -72,25 +80,29 @@ export function UserManagement() {
   };
 
   useEffect(() => {
+    loadUsers();
     loadPending();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const approve = async (id: string) => {
     try {
-      const res = await authFetch(
-        `http://127.0.0.1:8000/auth/approve-user/${id}`,
-        {
-          method: "POST",
-        },
-      );
+      const res = await authFetch(`${apiBaseUrl}/auth/approve-user/${id}`, {
+        method: "POST",
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.detail || "Approve failed");
+      await loadUsers();
       await loadPending();
     } catch (err: any) {
       alert(err?.message || "Approve failed");
     }
   };
+
+  const totalUsers = users.length + pendingUsers.length;
+  const activeUsers = users.length;
+  const pendingRequests = pendingUsers.length;
+  const inactiveUsers = 0;
 
   return (
     <div className="p-6 space-y-6">
@@ -113,19 +125,19 @@ export function UserManagement() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div className="text-sm text-gray-500">Total Users</div>
-          <div className="text-3xl mt-2 text-gray-900">24</div>
+          <div className="text-3xl mt-2 text-gray-900">{totalUsers}</div>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div className="text-sm text-gray-500">Active Users</div>
-          <div className="text-3xl mt-2 text-green-600">21</div>
+          <div className="text-3xl mt-2 text-green-600">{activeUsers}</div>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div className="text-sm text-gray-500">Pending Requests</div>
-          <div className="text-3xl mt-2 text-yellow-600">2</div>
+          <div className="text-3xl mt-2 text-yellow-600">{pendingRequests}</div>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div className="text-sm text-gray-500">Inactive Users</div>
-          <div className="text-3xl mt-2 text-red-600">3</div>
+          <div className="text-3xl mt-2 text-red-600">{inactiveUsers}</div>
         </div>
       </div>
 
@@ -193,6 +205,19 @@ export function UserManagement() {
           </div>
         </div>
 
+        {(usersLoading || usersError) && (
+          <div className="px-6 pt-4">
+            {usersError && (
+              <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+                {usersError}
+              </div>
+            )}
+            {usersLoading && (
+              <div className="text-sm text-gray-600">Loading users...</div>
+            )}
+          </div>
+        )}
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
@@ -226,37 +251,31 @@ export function UserManagement() {
             <tbody className="divide-y divide-gray-200">
               {users.map((user) => (
                 <tr
-                  key={user.id}
+                  key={user._id}
                   className="hover:bg-gray-50 transition-colors"
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.name}
+                    {user.name || "—"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {user.email}
+                    {user.email || "—"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {user.employeeId}
+                    —
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {user.role}
+                    {formatRole(user.role)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {user.department}
+                    {user.department || "—"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs ${
-                        user.status === "Active"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {user.status}
+                    <span className="px-3 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                      Active
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {user.lastLogin}
+                    {formatDateTime(user.last_login)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">

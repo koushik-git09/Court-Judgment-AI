@@ -178,6 +178,15 @@ async def login(*, email: str, password: str) -> LoginResult:
 
     token = create_access_token(user_id=user_id, role=role)
 
+    # Best-effort last-login tracking for admin UI.
+    try:
+        await get_users_collection().update_one(
+            {"_id": user["_id"]},
+            {"$set": {"last_login": _utcnow()}},
+        )
+    except Exception:
+        pass
+
     return {
         "access_token": token,
         "role": role,

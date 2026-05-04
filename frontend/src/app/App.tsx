@@ -31,6 +31,7 @@ import { AnalyticsDashboard } from "./components/AnalyticsDashboard";
 import { DepartmentAnalytics } from "./components/DepartmentAnalytics";
 import { SettingsDashboard } from "./components/SettingsDashboard";
 import { VerifierAnalytics } from "./components/VerifierAnalytics";
+import { ChatWidget } from "./components/ChatWidget";
 
 import { AuthProvider, type UserRole, useAuth } from "./context/AuthContext";
 
@@ -190,6 +191,7 @@ function LayoutShell({
           <Outlet />
         </main>
       </div>
+      <ChatWidget />
     </div>
   );
 }
