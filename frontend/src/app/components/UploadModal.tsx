@@ -2,6 +2,10 @@ import { X, Upload, FileText } from "lucide-react";
 import { useState } from "react";
 
 import { useAuth } from "../context/AuthContext";
+import {
+  CASE_CATEGORIES,
+  mapCategoryToDepartment,
+} from "../lib/departmentMapping";
 
 type UploadResult = {
   message: string;
@@ -65,6 +69,7 @@ export function UploadModal({ onClose, onSuccess }: UploadModalProps) {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("category", category);
+    formData.append("department", mapCategoryToDepartment(category));
     formData.append("court_name", court);
 
     setLoading(true);
@@ -169,10 +174,11 @@ export function UploadModal({ onClose, onSuccess }: UploadModalProps) {
                 className="mt-1 w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000]"
               >
                 <option value="">Select Category</option>
-                <option value="Civil">Civil</option>
-                <option value="Criminal">Criminal</option>
-                <option value="Constitutional">Constitutional</option>
-                <option value="Administrative">Administrative</option>
+                {CASE_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
               </select>
             </label>
 

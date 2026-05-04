@@ -88,7 +88,14 @@ def create_access_token(*, user_id: str, role: UserRole) -> str:
     return jwt.encode(payload, _get_jwt_secret(), algorithm=_get_jwt_algorithm())
 
 
-async def request_access(*, name: str, email: str, password: str, role: UserRole) -> str:
+async def request_access(
+    *,
+    name: str,
+    email: str,
+    password: str,
+    role: UserRole,
+    department: str | None = None,
+) -> str:
     normalized_email = _normalize_email(email)
 
     # Bootstrap: in dev environments, allow the *first* admin account to be auto-approved
@@ -109,6 +116,7 @@ async def request_access(*, name: str, email: str, password: str, role: UserRole
         "email": normalized_email,
         "password": hash_password(password),
         "role": role,
+        "department": (department or "").strip() or None,
         "is_approved": is_approved,
         "created_at": _utcnow(),
     }
@@ -143,6 +151,7 @@ class LoginResult(TypedDict):
     access_token: str
     role: UserRole
     user_id: str
+    department: Optional[str]
 
 
 async def login(*, email: str, password: str) -> LoginResult:
@@ -173,6 +182,7 @@ async def login(*, email: str, password: str) -> LoginResult:
         "access_token": token,
         "role": role,
         "user_id": user_id,
+        "department": (user.get("department") or None),
     }
 
 

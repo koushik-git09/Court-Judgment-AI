@@ -27,6 +27,7 @@ class RequestAccessRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=6, max_length=72)
     role: UserRole
+    department: str | None = None
 
 
 @router.post("/request-access")
@@ -36,6 +37,7 @@ async def request_access_route(data: RequestAccessRequest) -> dict[str, Any]:
         email=str(data.email),
         password=data.password,
         role=data.role,
+        department=data.department,
     )
     return {"user_id": user_id, "is_approved": False}
 

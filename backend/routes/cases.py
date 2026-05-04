@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from db import get_cases_collection
@@ -15,8 +15,22 @@ router = APIRouter(tags=["cases"], dependencies=[Depends(get_current_user)])
 
 
 @router.get("/cases")
-async def list_cases() -> list[dict[str, Any]]:
-    cases = await get_cases_collection().find({}).to_list(length=None)
+async def list_cases(
+    status: str | None = Query(default=None),
+    department: str | None = Query(default=None),
+) -> list[dict[str, Any]]:
+    query: dict[str, Any] = {}
+    if status and status.strip():
+        query["status"] = status.strip()
+    if department and department.strip():
+        raw = department.strip()
+        parts = [p.strip() for p in raw.split(",") if p.strip()]
+        if len(parts) == 1:
+            query["department"] = parts[0]
+        elif len(parts) > 1:
+            query["department"] = {"$in": parts}
+
+    cases = await get_cases_collection().find(query).to_list(length=None)
 
     for case in cases:
         if "_id" in case:

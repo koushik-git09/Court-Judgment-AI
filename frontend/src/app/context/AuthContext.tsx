@@ -13,6 +13,7 @@ type AuthUser = {
   userId: string;
   role: UserRole;
   email: string;
+  department?: string | null;
 };
 
 type AuthContextValue = {
@@ -29,6 +30,7 @@ type AuthContextValue = {
     email: string;
     password: string;
     role: UserRole;
+    department?: string | null;
   }) => Promise<void>;
   forgotPassword: (
     email: string,
@@ -46,6 +48,7 @@ const STORAGE_TOKEN = "token";
 const STORAGE_ROLE = "role";
 const STORAGE_USER_ID = "user_id";
 const STORAGE_USER_EMAIL = "user_email";
+const STORAGE_USER_DEPARTMENT = "user_department";
 
 function getApiBaseUrl() {
   const raw = (import.meta as any).env?.VITE_API_BASE_URL as string | undefined;
@@ -62,8 +65,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedRole = localStorage.getItem(STORAGE_ROLE) as UserRole | null;
     const storedUserId = localStorage.getItem(STORAGE_USER_ID);
     const storedEmail = localStorage.getItem(STORAGE_USER_EMAIL);
+    const storedDepartment = localStorage.getItem(STORAGE_USER_DEPARTMENT);
     if (!storedRole || !storedUserId) return null;
-    return { role: storedRole, userId: storedUserId, email: storedEmail || "" };
+    return {
+      role: storedRole,
+      userId: storedUserId,
+      email: storedEmail || "",
+      department: storedDepartment || null,
+    };
   });
 
   const role = user?.role ?? null;
@@ -83,11 +92,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(STORAGE_ROLE);
       localStorage.removeItem(STORAGE_USER_ID);
       localStorage.removeItem(STORAGE_USER_EMAIL);
+      localStorage.removeItem(STORAGE_USER_DEPARTMENT);
       return;
     }
     localStorage.setItem(STORAGE_ROLE, user.role);
     localStorage.setItem(STORAGE_USER_ID, user.userId);
     localStorage.setItem(STORAGE_USER_EMAIL, user.email);
+    if (user.department) {
+      localStorage.setItem(STORAGE_USER_DEPARTMENT, user.department);
+    } else {
+      localStorage.removeItem(STORAGE_USER_DEPARTMENT);
+    }
   }, [user]);
 
   const logout = () => {
@@ -97,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(STORAGE_ROLE);
     localStorage.removeItem(STORAGE_USER_ID);
     localStorage.removeItem(STORAGE_USER_EMAIL);
+    localStorage.removeItem(STORAGE_USER_DEPARTMENT);
   };
 
   const authFetch: AuthContextValue["authFetch"] = async (input, init) => {
@@ -121,12 +137,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       access_token: string;
       role: UserRole;
       user_id: string;
+      department?: string | null;
     };
 
     setToken(data.access_token);
-    setUser({ role: data.role, userId: data.user_id, email });
+    setUser({
+      role: data.role,
+      userId: data.user_id,
+      email,
+      department: data.department ?? null,
+    });
 
-    return { role: data.role, userId: data.user_id, email };
+    return {
+      role: data.role,
+      userId: data.user_id,
+      email,
+      department: data.department ?? null,
+    };
   };
 
   const requestAccess: AuthContextValue["requestAccess"] = async (args) => {

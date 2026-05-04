@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Eye, EyeOff, Scale, Shield, X } from "lucide-react";
 
 import { type UserRole, useAuth } from "../context/AuthContext";
+import { DEPARTMENTS } from "../lib/departmentMapping";
 
 interface LoginPageProps {
   onLoggedIn: (role: UserRole) => void;
@@ -26,6 +27,7 @@ export function LoginPage({
   const [reqEmail, setReqEmail] = useState("");
   const [reqPassword, setReqPassword] = useState("");
   const [reqRole, setReqRole] = useState<UserRole>("department");
+  const [reqDepartment, setReqDepartment] = useState<string>("Transport");
   const [reqMessage, setReqMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,6 +60,7 @@ export function LoginPage({
         email: reqEmail,
         password: reqPassword,
         role: reqRole,
+        department: reqRole !== "admin" ? reqDepartment : null,
       });
       setReqMessage(
         "Access request submitted successfully. An admin must approve your account.",
@@ -66,6 +69,7 @@ export function LoginPage({
       setReqEmail("");
       setReqPassword("");
       setReqRole("department");
+      setReqDepartment("Transport");
     } catch (err: any) {
       setReqMessage(err?.message || "Request failed");
     }
@@ -289,7 +293,15 @@ export function LoginPage({
                 <label className="text-sm text-gray-700 mb-2 block">Role</label>
                 <select
                   value={reqRole}
-                  onChange={(e) => setReqRole(e.target.value as UserRole)}
+                  onChange={(e) => {
+                    const nextRole = e.target.value as UserRole;
+                    setReqRole(nextRole);
+                    if (nextRole === "admin") {
+                      setReqDepartment("");
+                    } else if (!reqDepartment.trim()) {
+                      setReqDepartment("Transport");
+                    }
+                  }}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000] focus:border-transparent"
                 >
                   <option value="admin">admin</option>
@@ -297,6 +309,27 @@ export function LoginPage({
                   <option value="department">department</option>
                 </select>
               </div>
+
+              {reqRole !== "admin" ? (
+                <div>
+                  <label className="text-sm text-gray-700 mb-2 block">
+                    Select Department
+                  </label>
+                  <select
+                    value={reqDepartment}
+                    onChange={(e) => setReqDepartment(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000] focus:border-transparent"
+                  >
+                    <option value="">Select Department</option>
+                    {DEPARTMENTS.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
 
               <div>
                 <label className="text-sm text-gray-700 mb-2 block">

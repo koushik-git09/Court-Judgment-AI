@@ -13,6 +13,7 @@ class UserBase(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr
     role: UserRole
+    department: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -45,6 +46,7 @@ class LoginResponse(BaseModel):
     access_token: str
     role: UserRole
     user_id: str
+    department: Optional[str] = None
 
 
 class ForgotPasswordRequest(BaseModel):

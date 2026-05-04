@@ -9,6 +9,7 @@ from db import get_cases_collection
 from services.extraction_service import extract_case_fields
 from services.pdf_service import extract_text_from_pdf_bytes
 from services.auth_service import get_current_user
+from services.department_service import map_category_to_department
 
 
 router = APIRouter(tags=["upload"], dependencies=[Depends(get_current_user)])
@@ -18,6 +19,7 @@ router = APIRouter(tags=["upload"], dependencies=[Depends(get_current_user)])
 async def upload(
     file: UploadFile = File(...),
     category: str = Form(...),
+    department: str | None = Form(None),
     court_name: str = Form(...),
 ) -> dict[str, str]:
     if not file.filename:
@@ -38,8 +40,11 @@ async def upload(
 
     extracted = extract_case_fields(extracted_text)
 
+    resolved_department = (department or "").strip() or map_category_to_department(category)
+
     case_doc: dict[str, Any] = {
         "category": category,
+        "department": resolved_department,
         "court_name": court_name,
         "court_name_detected": extracted.court_name,
         "case_number": extracted.case_number,

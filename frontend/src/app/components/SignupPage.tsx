@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { Scale, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { useState } from "react";
+import { Scale, Eye, EyeOff, ArrowLeft } from "lucide-react";
+
+import { CASE_CATEGORIES } from "../lib/departmentMapping";
 
 interface SignupPageProps {
   onSignup: (role: string, email: string, name: string) => void;
@@ -8,13 +10,13 @@ interface SignupPageProps {
 
 export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    employeeId: '',
-    department: '',
-    role: 'verifier',
-    password: '',
-    confirmPassword: '',
+    fullName: "",
+    email: "",
+    employeeId: "",
+    department: "Transport",
+    role: "verifier",
+    password: "",
+    confirmPassword: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -22,7 +24,7 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
+      alert("Passwords do not match");
       return;
     }
     onSignup(formData.role, formData.email, formData.fullName);
@@ -44,8 +46,12 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
             <div className="w-20 h-20 bg-gradient-to-br from-[#FFD700] to-[#FFA500] rounded-full flex items-center justify-center mx-auto mb-4 shadow-2xl ring-4 ring-white/30">
               <Scale className="w-12 h-12 text-[#8B0000]" />
             </div>
-            <h1 className="text-white text-2xl mb-2 drop-shadow-lg">Access Request Form</h1>
-            <div className="text-[#FFD700] text-sm drop-shadow">Government of Karnataka</div>
+            <h1 className="text-white text-2xl mb-2 drop-shadow-lg">
+              Access Request Form
+            </h1>
+            <div className="text-[#FFD700] text-sm drop-shadow">
+              Government of Karnataka
+            </div>
           </div>
         </div>
 
@@ -59,18 +65,26 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
           </button>
 
           <div className="mb-6">
-            <h2 className="text-gray-900 text-center mb-2">Create New Account</h2>
-            <p className="text-sm text-gray-600 text-center">Submit your details for access approval</p>
+            <h2 className="text-gray-900 text-center mb-2">
+              Create New Account
+            </h2>
+            <p className="text-sm text-gray-600 text-center">
+              Submit your details for access approval
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="text-sm text-gray-700 mb-2 block">Full Name *</label>
+                <label className="text-sm text-gray-700 mb-2 block">
+                  Full Name *
+                </label>
                 <input
                   type="text"
                   value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, fullName: e.target.value })
+                  }
                   placeholder="Enter full name"
                   required
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000] focus:border-transparent"
@@ -78,11 +92,15 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
               </div>
 
               <div>
-                <label className="text-sm text-gray-700 mb-2 block">Employee ID *</label>
+                <label className="text-sm text-gray-700 mb-2 block">
+                  Employee ID *
+                </label>
                 <input
                   type="text"
                   value={formData.employeeId}
-                  onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, employeeId: e.target.value })
+                  }
                   placeholder="KA-2026-XXXX"
                   required
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000] focus:border-transparent"
@@ -91,11 +109,15 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
             </div>
 
             <div>
-              <label className="text-sm text-gray-700 mb-2 block">Official Email *</label>
+              <label className="text-sm text-gray-700 mb-2 block">
+                Official Email *
+              </label>
               <input
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
                 placeholder="your.email@karnataka.gov.in"
                 required
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000] focus:border-transparent"
@@ -103,29 +125,46 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="text-sm text-gray-700 mb-2 block">Department *</label>
-                <select
-                  value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  required
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000] focus:border-transparent"
-                >
-                  <option value="">Select Department</option>
-                  <option value="transport">Transport</option>
-                  <option value="revenue">Revenue</option>
-                  <option value="education">Education</option>
-                  <option value="health">Health</option>
-                  <option value="pwd">Public Works Department</option>
-                  <option value="admin">Administration</option>
-                </select>
-              </div>
+              {formData.role !== "admin" ? (
+                <div>
+                  <label className="text-sm text-gray-700 mb-2 block">
+                    Department *
+                  </label>
+                  <select
+                    value={formData.department}
+                    onChange={(e) =>
+                      setFormData({ ...formData, department: e.target.value })
+                    }
+                    required={formData.role !== "admin"}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000] focus:border-transparent"
+                  >
+                    <option value="">Select Department</option>
+                    {CASE_CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
 
               <div>
-                <label className="text-sm text-gray-700 mb-2 block">Requested Role *</label>
+                <label className="text-sm text-gray-700 mb-2 block">
+                  Requested Role *
+                </label>
                 <select
                   value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  onChange={(e) => {
+                    const nextRole = e.target.value;
+                    setFormData({
+                      ...formData,
+                      role: nextRole,
+                      department:
+                        nextRole === "admin"
+                          ? ""
+                          : formData.department || "Transport",
+                    });
+                  }}
                   required
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000] focus:border-transparent"
                 >
@@ -138,12 +177,16 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="text-sm text-gray-700 mb-2 block">Password *</label>
+                <label className="text-sm text-gray-700 mb-2 block">
+                  Password *
+                </label>
                 <div className="relative">
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
                     placeholder="Create password"
                     required
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000] focus:border-transparent"
@@ -153,18 +196,29 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                   >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="text-sm text-gray-700 mb-2 block">Confirm Password *</label>
+                <label className="text-sm text-gray-700 mb-2 block">
+                  Confirm Password *
+                </label>
                 <div className="relative">
                   <input
-                    type={showConfirmPassword ? 'text' : 'password'}
+                    type={showConfirmPassword ? "text" : "password"}
                     value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        confirmPassword: e.target.value,
+                      })
+                    }
                     placeholder="Re-enter password"
                     required
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000] focus:border-transparent"
@@ -174,7 +228,11 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                   >
-                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -193,14 +251,25 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
             </div>
 
             <div className="flex items-start gap-2">
-              <input type="checkbox" required className="w-4 h-4 mt-1 accent-[#8B0000]" />
+              <input
+                type="checkbox"
+                required
+                className="w-4 h-4 mt-1 accent-[#8B0000]"
+              />
               <label className="text-xs text-gray-600">
-                I confirm that all information provided is accurate and I agree to the{' '}
-                <button type="button" className="text-[#2563EB] hover:underline">
+                I confirm that all information provided is accurate and I agree
+                to the{" "}
+                <button
+                  type="button"
+                  className="text-[#2563EB] hover:underline"
+                >
                   Terms of Service
-                </button>{' '}
-                and{' '}
-                <button type="button" className="text-[#2563EB] hover:underline">
+                </button>{" "}
+                and{" "}
+                <button
+                  type="button"
+                  className="text-[#2563EB] hover:underline"
+                >
                   Privacy Policy
                 </button>
               </label>
@@ -216,7 +285,8 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
 
           <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
             <div className="text-xs text-amber-800 text-center">
-              ⚠️ Your request will be reviewed by the system administrator. You will receive an email notification once approved.
+              ⚠️ Your request will be reviewed by the system administrator. You
+              will receive an email notification once approved.
             </div>
           </div>
         </div>

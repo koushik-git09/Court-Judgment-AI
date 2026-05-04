@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import { getDepartmentAliases } from "../lib/departmentMapping";
 
 type BackendCase = {
   _id: string;
@@ -21,7 +22,7 @@ export function VerificationQueue({ onSelectCase }: VerificationQueueProps) {
   const [cases, setCases] = useState<BackendCase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  const { authFetch } = useAuth();
+  const { authFetch, apiBaseUrl, role, user } = useAuth();
 
   // Keep the prop for backwards compatibility, but navigation is handled here.
   void onSelectCase;
@@ -32,9 +33,25 @@ export function VerificationQueue({ onSelectCase }: VerificationQueueProps) {
     const loadCases = async () => {
       setIsLoading(true);
       try {
-        const res = await authFetch("http://127.0.0.1:8000/cases", {
-          signal: controller.signal,
-        });
+        const deptFromUser = (user?.department || "").trim();
+        if (role === "verifier" && !deptFromUser) {
+          setCases([]);
+          return;
+        }
+
+        const deptAliases = deptFromUser
+          ? getDepartmentAliases(deptFromUser)
+          : [];
+        const deptParam = deptAliases.length
+          ? `&department=${encodeURIComponent(deptAliases.join(","))}`
+          : "";
+
+        const res = await authFetch(
+          `${apiBaseUrl}/cases?${deptParam.slice(1)}`,
+          {
+            signal: controller.signal,
+          },
+        );
         if (!res.ok) throw new Error(`Failed to fetch cases: ${res.status}`);
         const data = (await res.json()) as BackendCase[];
         setCases(Array.isArray(data) ? data : []);
@@ -49,12 +66,12 @@ export function VerificationQueue({ onSelectCase }: VerificationQueueProps) {
 
     loadCases();
     return () => controller.abort();
-  }, []);
+  }, [apiBaseUrl, authFetch, role, user?.department]);
 
-  const queuedCases = useMemo(
-    () => cases.filter((c) => c.status === "pending_verification"),
-    [cases],
-  );
+  const queuedCases = useMemo(() => {
+    // When the server is filtered by status, this is usually a no-op.
+    return cases.filter((c) => c.status === "pending_verification");
+  }, [cases]);
 
   const getTitleFromExtractedText = (text: string) => {
     const words = (text || "").trim().split(/\s+/).filter(Boolean);

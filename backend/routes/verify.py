@@ -10,6 +10,7 @@ from db import get_cases_collection
 from services.auth_service import get_current_user
 from services.ai_service import generate_ai_analysis
 from services.extraction_service import ExtractedFields
+from services.department_service import map_category_to_department
 
 
 router = APIRouter(tags=["verify"], dependencies=[Depends(get_current_user)])
@@ -45,11 +46,20 @@ async def verify_case(data: VerifyRequest):
             parties=case_doc.get("parties"),
         )
         analysis = generate_ai_analysis(case_doc.get("extracted_text") or "", extracted)
+
+        resolved_department = (
+            (case_doc.get("department") or "").strip()
+            or map_category_to_department(case_doc.get("category"))
+            or (analysis.department or "").strip()
+        )
+
+        # Store department at the case root (routing) and in the action plan (display).
+        update_fields["department"] = resolved_department
         update_fields["action_plan"] = {
             "summary": analysis.summary,
             "action": analysis.action,
             "deadline": analysis.deadline,
-            "department": analysis.department,
+            "department": resolved_department,
             "risk": analysis.risk,
             "confidence": round(analysis.confidence / 100, 2),
         }

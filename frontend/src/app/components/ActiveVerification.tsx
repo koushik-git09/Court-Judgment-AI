@@ -126,6 +126,14 @@ export function ActiveVerification() {
     ? Math.max(0, Math.min(100, analysis.confidence))
     : 0;
 
+  const buildDetailedActionPlan = (a: Analysis) => {
+    const department = (a.department || "").trim() || "the relevant department";
+    const action = (a.action || "").trim() || "take necessary action";
+    const deadline = (a.deadline || "").trim() || "the specified deadline";
+
+    return `The ${department} is required to comply with the court order by ${action.toLowerCase()} within ${deadline}. Ensure all procedural steps are completed and documented before the deadline to avoid legal consequences.`;
+  };
+
   const Field = ({
     label,
     value,
@@ -438,6 +446,23 @@ export function ActiveVerification() {
                   </p>
                 )}
               </div>
+
+              {/* Detailed Action Plan */}
+              {analysis ? (
+                <div className="rounded-2xl shadow-sm border border-gray-100 bg-primary/5 p-6">
+                  <div className="flex items-center gap-2">
+                    <div className="size-9 rounded-xl bg-white/70 border border-gray-100 flex items-center justify-center">
+                      <CheckCircle2 className="size-4 text-gray-700" />
+                    </div>
+                    <h3 className="text-gray-900 font-semibold">
+                      Detailed Action Plan
+                    </h3>
+                  </div>
+                  <p className="mt-4 text-sm text-gray-800 leading-6">
+                    {buildDetailedActionPlan(analysis)}
+                  </p>
+                </div>
+              ) : null}
 
               {/* Explainability */}
               <div className="rounded-2xl shadow-sm border border-gray-100 bg-primary/5 p-6">

@@ -2,6 +2,7 @@ import { Search, Filter, Download, Eye } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "../context/AuthContext";
+import { getDepartmentAliases } from "../lib/departmentMapping";
 
 type BackendCase = {
   _id: string;
@@ -15,7 +16,7 @@ type BackendCase = {
 export function AllCasesPage() {
   const [selectedFilter, setSelectedFilter] = useState("all");
 
-  const { authFetch } = useAuth();
+  const { authFetch, apiBaseUrl, role, user } = useAuth();
 
   const [cases, setCases] = useState<BackendCase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,7 +43,23 @@ export function AllCasesPage() {
       setIsLoading(true);
       setHasError(false);
       try {
-        const res = await authFetch("http://127.0.0.1:8000/cases", {
+        const deptFromUser = (user?.department || "").trim();
+        const shouldFilterByDept = role === "verifier" || role === "department";
+
+        if (shouldFilterByDept && !deptFromUser) {
+          setCases([]);
+          return;
+        }
+
+        const deptAliases = deptFromUser
+          ? getDepartmentAliases(deptFromUser)
+          : [];
+        const deptParam =
+          shouldFilterByDept && deptAliases.length
+            ? `?department=${encodeURIComponent(deptAliases.join(","))}`
+            : "";
+
+        const res = await authFetch(`${apiBaseUrl}/cases${deptParam}`, {
           signal: controller.signal,
         });
         if (!res.ok) {
@@ -64,7 +81,7 @@ export function AllCasesPage() {
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [apiBaseUrl, authFetch, role, user?.department]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
