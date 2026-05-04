@@ -5,16 +5,21 @@ import { useAuth } from "../context/AuthContext";
 
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { Progress } from "./ui/progress";
 import { ScrollArea } from "./ui/scroll-area";
+import { Textarea } from "./ui/textarea";
 import {
   CalendarClock,
   CheckCircle2,
   FileText,
   Gavel,
+  PencilLine,
   Scale,
+  Save,
   Sparkles,
   TextQuote,
+  Undo2,
   XCircle,
 } from "lucide-react";
 
@@ -50,13 +55,79 @@ export function ActiveVerification() {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const { authFetch } = useAuth();
+  const { authFetch, apiBaseUrl } = useAuth();
 
   const caseData = location.state as BackendCase | null | undefined;
 
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editDraft, setEditDraft] = useState<
+    Pick<Analysis, "summary" | "action" | "deadline" | "department" | "risk">
+  >({
+    summary: "",
+    action: "",
+    deadline: "",
+    department: "",
+    risk: "",
+  });
+
+  const startEdit = () => {
+    if (!analysis) return;
+    setEditDraft({
+      summary: analysis.summary || "",
+      action: analysis.action || "",
+      deadline: analysis.deadline || "",
+      department: analysis.department || "",
+      risk: analysis.risk || "",
+    });
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+  };
+
+  const saveEdit = async () => {
+    if (!analysis) return;
+
+    const next = {
+      summary: editDraft.summary.trim(),
+      action: editDraft.action.trim(),
+      deadline: editDraft.deadline.trim(),
+      department: editDraft.department.trim(),
+      risk: editDraft.risk.trim(),
+    };
+
+    setAnalysis((prev) => (prev ? { ...prev, ...next } : prev));
+    setIsEditing(false);
+
+    // Optional persistence: if backend supports editing action plan fields.
+    // This is best-effort and does not block verifier decisions.
+    try {
+      if (!caseData?._id) return;
+      const res = await authFetch(
+        `${apiBaseUrl}/cases/${encodeURIComponent(caseData._id)}/action-plan`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(next),
+        },
+      );
+
+      // Avoid surfacing noisy alerts; log for debugging if a proxy/base URL is misconfigured.
+      if (!res.ok) {
+        const text = await res.text();
+        console.warn("Failed to persist edits:", text);
+      }
+    } catch (err) {
+      console.warn("Failed to persist edits:", err);
+    }
+  };
 
   const renderHighlightedText = (text: string) => {
     const pattern = /(\bappeal\b|\bcomply\b|\b\d+\s*days?\b|\bdays?\b)/gi;
@@ -131,7 +202,7 @@ export function ActiveVerification() {
     const action = (a.action || "").trim() || "take necessary action";
     const deadline = (a.deadline || "").trim() || "the specified deadline";
 
-    return `The ${department} is required to comply with the court order by ${action.toLowerCase()} within ${deadline}. Ensure all procedural steps are completed and documented before the deadline to avoid legal consequences.`;
+    return `The ${department} is required to comply with the court order by ${action.toLowerCase()} within ${deadline}. Ensure all procedural steps are completed and documented before the deadline. Any delay may lead to escalation and legal consequences.`;
   };
 
   const Field = ({
@@ -226,334 +297,454 @@ export function ActiveVerification() {
   }
 
   return (
-    <div className="p-6 h-full">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
-        {/* LEFT (60%) */}
-        <div className="lg:col-span-7">
-          <div className="h-[calc(100vh-250px)] min-h-0 rounded-2xl border border-gray-100 bg-gray-50 shadow-sm flex flex-col overflow-hidden">
-            <div className="p-6 border-b border-gray-100 bg-white/60">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="size-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center shadow-sm">
-                    <FileText className="size-4 text-gray-700" />
-                  </div>
-                  <div>
-                    <h3 className="text-gray-900 font-semibold leading-tight">
-                      Extracted Text
-                    </h3>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Review highlighted terms before approving.
-                    </p>
-                  </div>
+    <div className="p-6 w-full">
+      <div className="w-full max-w-none flex flex-col gap-6">
+        {/* Extracted Text (Full Width) */}
+        <div className="rounded-xl border border-gray-100 bg-gray-50 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-gray-100 bg-white/70">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center shadow-sm">
+                  <FileText className="size-5 text-gray-700" />
                 </div>
-
-                <div className="hidden sm:flex items-center gap-2">
-                  <Badge
-                    variant="outline"
-                    className="bg-red-50 text-red-800 border-red-100"
-                  >
-                    appeal
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className="bg-yellow-50 text-yellow-800 border-yellow-100"
-                  >
-                    days
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className="bg-green-50 text-green-800 border-green-100"
-                  >
-                    comply
-                  </Badge>
+                <div>
+                  <h2 className="text-gray-900 font-bold text-lg leading-tight">
+                    Extracted Text
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Review highlighted keywords before taking action.
+                  </p>
                 </div>
               </div>
-            </div>
 
-            <ScrollArea className="flex-1 min-h-0" type="always">
-              <div className="p-6 text-[13px] text-gray-800 whitespace-pre-wrap leading-7">
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className="bg-red-50 text-red-800 border-red-100"
+                >
+                  appeal
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="bg-yellow-50 text-yellow-800 border-yellow-100"
+                >
+                  days
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="bg-green-50 text-green-800 border-green-100"
+                >
+                  comply
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          <div className="max-h-[70vh]">
+            <ScrollArea className="h-[70vh]" type="always">
+              <div className="p-6 sm:p-8 text-[15px] sm:text-[16px] text-gray-900 whitespace-pre-wrap leading-8">
                 {renderHighlightedText(caseData.extracted_text)}
               </div>
             </ScrollArea>
           </div>
         </div>
 
-        {/* RIGHT (40%) */}
-        <div className="lg:col-span-5">
-          <div className="h-[calc(100vh-250px)] min-h-0 flex flex-col gap-4 overflow-hidden">
-            <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
-              {/* Case Details */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="size-9 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center">
-                      <Gavel className="size-4 text-gray-700" />
-                    </div>
-                    <h3 className="text-gray-900 font-semibold">
-                      Case Details
-                    </h3>
-                  </div>
-                  <Badge variant="outline" className="text-gray-900">
-                    {caseData.status}
-                  </Badge>
-                </div>
-
-                <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field
-                    label="Case ID"
-                    value={caseData._id}
-                    icon={<Scale className="size-4" />}
-                  />
-                  <Field
-                    label="Case Number"
-                    value={analysis?.case_number || caseData.case_number || "—"}
-                    icon={<TextQuote className="size-4" />}
-                  />
-                  <Field
-                    label="Court"
-                    value={caseData.court_name}
-                    icon={<Gavel className="size-4" />}
-                  />
-                  <Field
-                    label="Category"
-                    value={caseData.category}
-                    icon={<Sparkles className="size-4" />}
-                  />
-                  <div className="sm:col-span-2">
-                    <Field
-                      label="Parties"
-                      value={analysis?.parties || caseData.parties || "—"}
-                      icon={<Scale className="size-4" />}
-                    />
-                  </div>
-                  <Field
-                    label="Order Date"
-                    value={analysis?.order_date || caseData.order_date || "—"}
-                    icon={<CalendarClock className="size-4" />}
-                  />
-                </div>
+        {/* Case Details */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+                <Gavel className="size-5 text-gray-700" />
               </div>
-
-              {/* AI Analysis */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="size-9 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center">
-                    <Sparkles className="size-4 text-gray-700" />
-                  </div>
-                  <h3 className="text-gray-900 font-semibold">AI Analysis</h3>
-                  <div className="ml-auto">
-                    {analysis?.extraction_engine ? (
-                      <Badge variant="outline" className="text-gray-700">
-                        {analysis.extraction_engine}
-                      </Badge>
-                    ) : null}
-                  </div>
-                </div>
-
-                {loading && (
-                  <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-4">
-                    <p className="text-sm text-gray-600">Analyzing case…</p>
-                    <div className="mt-3">
-                      <Progress value={35} className="h-2" />
-                    </div>
-                  </div>
-                )}
-
-                {analysis && (
-                  <div className="mt-5 space-y-5">
-                    <div>
-                      <p className="text-[11px] uppercase tracking-wide text-gray-500">
-                        Summary
-                      </p>
-                      <p className="mt-2 text-sm text-gray-900 leading-6">
-                        {analysis.summary}
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-[11px] uppercase tracking-wide text-gray-500">
-                          Action
-                        </p>
-                        <div className="mt-2">
-                          <Badge
-                            variant="outline"
-                            className={actionBadgeClass(analysis.action)}
-                          >
-                            {analysis.action}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-[11px] uppercase tracking-wide text-gray-500">
-                          Risk
-                        </p>
-                        <div className="mt-2">
-                          <Badge
-                            variant="outline"
-                            className={riskBadgeClass(analysis.risk)}
-                          >
-                            {analysis.risk}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <CalendarClock className="size-4 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-[11px] uppercase tracking-wide text-gray-500">
-                            Deadline
-                          </p>
-                          <p className="mt-1 text-sm font-semibold text-gray-900">
-                            {analysis.deadline}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <Building2Fallback />
-                        <div>
-                          <p className="text-[11px] uppercase tracking-wide text-gray-500">
-                            Department
-                          </p>
-                          <p className="mt-1 text-sm font-semibold text-gray-900">
-                            {analysis.department}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-gray-600 font-medium">
-                          Confidence
-                        </p>
-                        <p className="text-sm font-semibold text-gray-900">
-                          {Math.round(confidenceValue)}%
-                        </p>
-                      </div>
-                      <div className="mt-3">
-                        <Progress value={confidenceValue} className="h-2" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {!analysis && !loading && (
-                  <p className="mt-4 text-sm text-gray-500">
-                    Waiting for analysis…
-                  </p>
-                )}
-              </div>
-
-              {/* Detailed Action Plan */}
-              {analysis ? (
-                <div className="rounded-2xl shadow-sm border border-gray-100 bg-primary/5 p-6">
-                  <div className="flex items-center gap-2">
-                    <div className="size-9 rounded-xl bg-white/70 border border-gray-100 flex items-center justify-center">
-                      <CheckCircle2 className="size-4 text-gray-700" />
-                    </div>
-                    <h3 className="text-gray-900 font-semibold">
-                      Detailed Action Plan
-                    </h3>
-                  </div>
-                  <p className="mt-4 text-sm text-gray-800 leading-6">
-                    {buildDetailedActionPlan(analysis)}
-                  </p>
-                </div>
-              ) : null}
-
-              {/* Explainability */}
-              <div className="rounded-2xl shadow-sm border border-gray-100 bg-primary/5 p-6">
-                <div className="flex items-center gap-2">
-                  <div className="size-9 rounded-xl bg-white/70 border border-gray-100 flex items-center justify-center">
-                    <TextQuote className="size-4 text-gray-700" />
-                  </div>
-                  <h3 className="text-gray-900 font-semibold">
-                    Why AI Suggested This
-                  </h3>
-                </div>
-
-                {!analysis && !loading && (
-                  <p className="mt-4 text-sm text-gray-600">
-                    Run analysis to view reasoning and evidence.
-                  </p>
-                )}
-
-                {analysis && (
-                  <div className="mt-5 space-y-4">
-                    <div className="rounded-xl bg-white/70 border border-gray-100 p-4 border-l-4 border-l-primary">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="size-4 text-gray-600" />
-                        <p className="text-sm font-semibold text-gray-900">
-                          Reasoning
-                        </p>
-                      </div>
-                      {analysis.reasoning?.length ? (
-                        <ul className="mt-3 list-disc pl-5 text-sm text-gray-800 space-y-1">
-                          {analysis.reasoning.map((item, i) => (
-                            <li key={`reason-${i}`}>{item}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="mt-2 text-sm text-gray-600">
-                          No reasoning provided.
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="rounded-xl bg-white/70 border border-gray-100 p-4 border-l-4 border-l-primary">
-                      <div className="flex items-center gap-2">
-                        <FileText className="size-4 text-gray-600" />
-                        <p className="text-sm font-semibold text-gray-900">
-                          Evidence
-                        </p>
-                      </div>
-                      {analysis.evidence?.length ? (
-                        <ul className="mt-3 list-disc pl-5 text-sm text-gray-800 space-y-1">
-                          {analysis.evidence.map((item, i) => (
-                            <li key={`evidence-${i}`}>{item}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="mt-2 text-sm text-gray-600">
-                          No evidence extracted.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
+              <div>
+                <h3 className="text-gray-900 font-bold text-base">
+                  Case Details
+                </h3>
+                <p className="text-sm text-gray-600 mt-0.5">
+                  Reference information for verification.
+                </p>
               </div>
             </div>
+            <Badge variant="outline" className="text-gray-900">
+              {caseData.status}
+            </Badge>
+          </div>
 
-            {/* Sticky Actions */}
-            <div className="shrink-0 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => handleVerify("approved")}
-                  className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
-                  disabled={verifying}
-                >
-                  <CheckCircle2 className="size-4" />
-                  Approve
-                </Button>
-
-                <Button
-                  onClick={() => handleVerify("rejected")}
-                  className="flex-1 h-11 transition-colors"
-                  variant="destructive"
-                  disabled={verifying}
-                >
-                  <XCircle className="size-4" />
-                  Reject
-                </Button>
-              </div>
-              <p className="mt-3 text-xs text-gray-500">
-                Verification updates the case status immediately.
-              </p>
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <Field
+              label="Case ID"
+              value={<span className="font-mono text-xs">{caseData._id}</span>}
+              icon={<Scale className="size-4" />}
+            />
+            <Field
+              label="Case Number"
+              value={analysis?.case_number || caseData.case_number || "—"}
+              icon={<TextQuote className="size-4" />}
+            />
+            <Field
+              label="Court"
+              value={caseData.court_name}
+              icon={<Gavel className="size-4" />}
+            />
+            <Field
+              label="Category"
+              value={caseData.category}
+              icon={<Sparkles className="size-4" />}
+            />
+            <Field
+              label="Order Date"
+              value={analysis?.order_date || caseData.order_date || "—"}
+              icon={<CalendarClock className="size-4" />}
+            />
+            <div className="sm:col-span-2 lg:col-span-3">
+              <Field
+                label="Parties"
+                value={analysis?.parties || caseData.parties || "—"}
+                icon={<Scale className="size-4" />}
+              />
             </div>
           </div>
+        </div>
+
+        {/* AI Analysis */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+                <Sparkles className="size-5 text-gray-700" />
+              </div>
+              <div>
+                <h3 className="text-gray-900 font-bold text-base">
+                  AI Analysis
+                </h3>
+                <p className="text-sm text-gray-600 mt-0.5">
+                  Structured summary for government verification workflow.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {analysis?.extraction_engine ? (
+                <Badge variant="outline" className="text-gray-700">
+                  {analysis.extraction_engine}
+                </Badge>
+              ) : null}
+            </div>
+          </div>
+
+          {loading && (
+            <div className="mt-5 rounded-xl border border-gray-100 bg-gray-50 p-4">
+              <p className="text-sm text-gray-600">Analyzing case…</p>
+              <div className="mt-3">
+                <Progress value={35} className="h-2" />
+              </div>
+            </div>
+          )}
+
+          {analysis && (
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 rounded-xl border border-gray-100 bg-gray-50/60 p-5">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500">
+                  Summary
+                </p>
+                {!isEditing ? (
+                  <p className="mt-2 text-sm text-gray-900 leading-7">
+                    {analysis.summary}
+                  </p>
+                ) : (
+                  <Textarea
+                    value={editDraft.summary}
+                    onChange={(e) =>
+                      setEditDraft((d) => ({ ...d, summary: e.target.value }))
+                    }
+                    className="mt-2 min-h-28 bg-white"
+                  />
+                )}
+              </div>
+
+              <div className="rounded-xl border border-gray-100 bg-white p-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-gray-600 font-medium">
+                    Confidence
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {Math.round(confidenceValue)}%
+                  </p>
+                </div>
+                <div className="mt-3">
+                  <Progress value={confidenceValue} className="h-2" />
+                </div>
+                <div className="mt-5 grid grid-cols-1 gap-4">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-gray-500">
+                      Action
+                    </p>
+                    {!isEditing ? (
+                      <div className="mt-2">
+                        <Badge
+                          variant="outline"
+                          className={actionBadgeClass(analysis.action)}
+                        >
+                          {analysis.action}
+                        </Badge>
+                      </div>
+                    ) : (
+                      <Input
+                        value={editDraft.action}
+                        onChange={(e) =>
+                          setEditDraft((d) => ({
+                            ...d,
+                            action: e.target.value,
+                          }))
+                        }
+                        className="mt-2 bg-white"
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-gray-500">
+                      Risk
+                    </p>
+                    {!isEditing ? (
+                      <div className="mt-2">
+                        <Badge
+                          variant="outline"
+                          className={riskBadgeClass(analysis.risk)}
+                        >
+                          {analysis.risk}
+                        </Badge>
+                      </div>
+                    ) : (
+                      <select
+                        value={editDraft.risk}
+                        onChange={(e) =>
+                          setEditDraft((d) => ({ ...d, risk: e.target.value }))
+                        }
+                        className="mt-2 h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="">Select risk</option>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                      </select>
+                    )}
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <CalendarClock className="size-4 text-gray-400 mt-0.5" />
+                    <div className="w-full">
+                      <p className="text-[11px] uppercase tracking-wide text-gray-500">
+                        Deadline
+                      </p>
+                      {!isEditing ? (
+                        <p className="mt-1 text-sm font-semibold text-gray-900">
+                          {analysis.deadline}
+                        </p>
+                      ) : (
+                        <Input
+                          value={editDraft.deadline}
+                          onChange={(e) =>
+                            setEditDraft((d) => ({
+                              ...d,
+                              deadline: e.target.value,
+                            }))
+                          }
+                          className="mt-2 bg-white"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Building2Fallback />
+                    <div className="w-full">
+                      <p className="text-[11px] uppercase tracking-wide text-gray-500">
+                        Department
+                      </p>
+                      {!isEditing ? (
+                        <p className="mt-1 text-sm font-semibold text-gray-900">
+                          {analysis.department}
+                        </p>
+                      ) : (
+                        <Input
+                          value={editDraft.department}
+                          onChange={(e) =>
+                            setEditDraft((d) => ({
+                              ...d,
+                              department: e.target.value,
+                            }))
+                          }
+                          className="mt-2 bg-white"
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reasoning & Evidence */}
+              <div className="lg:col-span-3 rounded-xl border border-gray-100 bg-primary/5 p-6">
+                <div className="flex items-center gap-2">
+                  <div className="size-10 rounded-xl bg-white/70 border border-gray-100 flex items-center justify-center">
+                    <TextQuote className="size-5 text-gray-700" />
+                  </div>
+                  <h4 className="text-gray-900 font-bold">
+                    Why AI Suggested This
+                  </h4>
+                </div>
+
+                <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="rounded-xl bg-white/70 border border-gray-100 p-4 border-l-4 border-l-primary">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="size-4 text-gray-600" />
+                      <p className="text-sm font-semibold text-gray-900">
+                        Reasoning
+                      </p>
+                    </div>
+                    {analysis.reasoning?.length ? (
+                      <ul className="mt-3 list-disc pl-5 text-sm text-gray-800 space-y-1">
+                        {analysis.reasoning.map((item, i) => (
+                          <li key={`reason-${i}`}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 text-sm text-gray-600">
+                        No reasoning provided.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="rounded-xl bg-white/70 border border-gray-100 p-4 border-l-4 border-l-primary">
+                    <div className="flex items-center gap-2">
+                      <FileText className="size-4 text-gray-600" />
+                      <p className="text-sm font-semibold text-gray-900">
+                        Evidence
+                      </p>
+                    </div>
+                    {analysis.evidence?.length ? (
+                      <ul className="mt-3 list-disc pl-5 text-sm text-gray-800 space-y-1">
+                        {analysis.evidence.map((item, i) => (
+                          <li key={`evidence-${i}`}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 text-sm text-gray-600">
+                        No evidence extracted.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!analysis && !loading && (
+            <p className="mt-5 text-sm text-gray-500">Waiting for analysis…</p>
+          )}
+        </div>
+
+        {/* Detailed Action Plan */}
+        {analysis ? (
+          <div className="rounded-xl shadow-sm border border-primary/20 bg-primary/5 p-6">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-white/70 border border-gray-100 flex items-center justify-center">
+                <CheckCircle2 className="size-5 text-gray-700" />
+              </div>
+              <div>
+                <h3 className="text-gray-900 font-bold text-base">
+                  Detailed Action Plan
+                </h3>
+                <p className="text-sm text-gray-600 mt-0.5">
+                  Auto-generated guidance based on AI fields.
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 text-sm text-gray-800 leading-7">
+              {buildDetailedActionPlan({
+                ...analysis,
+                ...(isEditing ? editDraft : {}),
+              })}
+            </p>
+          </div>
+        ) : null}
+
+        {/* Verification Actions */}
+        <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-gray-900 font-bold text-base">
+                Verification Actions
+              </h3>
+              <p className="text-sm text-gray-600 mt-0.5">
+                Approve, edit fields for accuracy, or reject.
+              </p>
+            </div>
+            {isEditing ? (
+              <Badge
+                variant="outline"
+                className="text-blue-700 border-blue-200 bg-blue-50"
+              >
+                Edit mode
+              </Badge>
+            ) : null}
+          </div>
+
+          {!isEditing ? (
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Button
+                onClick={() => handleVerify("approved")}
+                className="h-12 w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={verifying}
+              >
+                <CheckCircle2 className="size-5" />
+                Approve
+              </Button>
+              <Button
+                type="button"
+                onClick={startEdit}
+                className="h-12 w-full bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={!analysis || loading}
+              >
+                <PencilLine className="size-5" />
+                Edit
+              </Button>
+              <Button
+                onClick={() => handleVerify("rejected")}
+                className="h-12 w-full"
+                variant="destructive"
+                disabled={verifying}
+              >
+                <XCircle className="size-5" />
+                Reject
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Button
+                type="button"
+                onClick={saveEdit}
+                className="h-12 w-full bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Save className="size-5" />
+                Save
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={cancelEdit}
+                className="h-12 w-full"
+              >
+                <Undo2 className="size-5" />
+                Cancel
+              </Button>
+            </div>
+          )}
+
+          <p className="mt-4 text-xs text-gray-500">
+            Approve/Reject updates the case status immediately. Edits update the
+            action plan fields used for approval.
+          </p>
         </div>
       </div>
     </div>

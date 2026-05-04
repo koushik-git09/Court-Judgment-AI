@@ -66,3 +66,47 @@ async def complete_case(data: CompleteRequest):
         raise HTTPException(status_code=404, detail="Case not found")
 
     return {"message": "Case marked as completed"}
+
+
+class UpdateActionPlanRequest(BaseModel):
+    summary: str | None = None
+    action: str | None = None
+    deadline: str | None = None
+    department: str | None = None
+    risk: str | None = None
+
+
+@router.patch("/cases/{case_id}/action-plan")
+async def update_action_plan(case_id: str, data: UpdateActionPlanRequest):
+    try:
+        case_object_id = ObjectId(case_id)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid case_id") from exc
+
+    update_fields: dict[str, Any] = {}
+
+    if data.summary is not None:
+        update_fields["action_plan.summary"] = data.summary
+    if data.action is not None:
+        update_fields["action_plan.action"] = data.action
+    if data.deadline is not None:
+        update_fields["action_plan.deadline"] = data.deadline
+    if data.department is not None:
+        update_fields["action_plan.department"] = data.department
+        # Keep the root department in sync for routing/filtering.
+        update_fields["department"] = data.department
+    if data.risk is not None:
+        update_fields["action_plan.risk"] = data.risk
+
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No fields provided")
+
+    result = await get_cases_collection().update_one(
+        {"_id": case_object_id},
+        {"$set": update_fields},
+    )
+
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    return {"message": "Action plan updated"}
