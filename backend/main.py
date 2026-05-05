@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from db import close_mongo_client, get_mongo_client
@@ -71,6 +71,12 @@ def root() -> dict[str, Any]:
         "service": "court-judgment-backend",
         "env": os.getenv("APP_ENV", "dev"),
     }
+
+
+@app.head("/", include_in_schema=False)
+def root_head() -> Response:
+    # Some platforms send HEAD requests for health checks.
+    return Response(status_code=200)
 
 
 # -------------------- ROUTERS --------------------
