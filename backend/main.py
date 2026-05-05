@@ -19,6 +19,24 @@ load_dotenv()
 app = FastAPI(title="Court Judgment Processing API", version="0.1.0")
 
 
+def _get_cors_origins() -> list[str]:
+    """Return allowed CORS origins.
+
+    Configure with `CORS_ORIGINS` as a comma-separated list, e.g.
+    "https://myapp.vercel.app,https://myapp-git-main.vercel.app".
+    """
+
+    raw = (os.getenv("CORS_ORIGINS") or "").strip()
+    if raw:
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+    # Dev defaults.
+    return [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
+
 # -------------------- STARTUP / SHUTDOWN --------------------
 
 @app.on_event("startup")
@@ -36,10 +54,8 @@ async def _shutdown() -> None:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=_get_cors_origins(),
+    allow_origin_regex=(os.getenv("CORS_ORIGIN_REGEX") or None),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
