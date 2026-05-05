@@ -21,11 +21,11 @@ export function AdminDashboard() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [cases, setCases] = useState<CaseItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const { authFetch } = useAuth();
+  const { authFetch, apiBaseUrl } = useAuth();
 
   const fetchCases = async () => {
     try {
-      const res = await authFetch("http://127.0.0.1:8000/cases");
+      const res = await authFetch(`${apiBaseUrl}/cases`);
       const data = await res.json();
       setCases(data);
     } catch (err) {

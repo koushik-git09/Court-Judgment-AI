@@ -24,7 +24,7 @@ export function UploadModal({ onClose, onSuccess }: UploadModalProps) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const { authFetch } = useAuth();
+  const { authFetch, apiBaseUrl } = useAuth();
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -76,7 +76,7 @@ export function UploadModal({ onClose, onSuccess }: UploadModalProps) {
     setResult(null);
 
     try {
-      const response = await authFetch("http://127.0.0.1:8000/upload", {
+      const response = await authFetch(`${apiBaseUrl}/upload`, {
         method: "POST",
         body: formData,
       });

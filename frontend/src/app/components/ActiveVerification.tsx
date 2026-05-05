@@ -237,7 +237,7 @@ export function ActiveVerification() {
       setLoading(true);
 
       try {
-        const res = await fetch("http://127.0.0.1:8000/analyze", {
+        const res = await authFetch(`${apiBaseUrl}/analyze`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -246,6 +246,11 @@ export function ActiveVerification() {
             extracted_text: caseData.extracted_text,
           }),
         });
+
+        if (!res.ok) {
+          const detail = await res.text().catch(() => "");
+          throw new Error(detail || `Analyze failed (${res.status})`);
+        }
 
         const data = await res.json();
         setAnalysis(data);
@@ -263,7 +268,7 @@ export function ActiveVerification() {
   const handleVerify = async (status: "approved" | "rejected") => {
     try {
       setVerifying(true);
-      await authFetch("http://127.0.0.1:8000/verify", {
+      const res = await authFetch(`${apiBaseUrl}/verify`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -273,6 +278,11 @@ export function ActiveVerification() {
           status: status,
         }),
       });
+
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(detail || `Verify failed (${res.status})`);
+      }
 
       alert(`Case ${status}`);
       navigate("/verifier/queue");
